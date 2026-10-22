@@ -41,3 +41,21 @@ Configured a Windows Server 2025 lab environment using Oracle VirtualBox to demo
 
 ## Outcome
 Established a functioning Active Directory domain and configured group-based NTFS access controls in a Windows Server 2025 virtual lab.
+## Lab Evidence — Screenshots
+
+The following screenshots document the Windows Server 2025 Active Directory and NTFS security lab.
+
+### 1. Domain Controller Configuration
+![DC01 Domain Configuration](01-DC01-Domain-Configuration.png)
+
+### 2. Active Directory Users and Groups
+![Active Directory Users and Groups](02-Active-Directory-Users-and-Groups.png)
+
+### 3. HR-Staff Security Group Membership
+![HR-Staff Group Membership](03-HR-Staff-Group-Membership.png)
+
+### 4. NTFS Folder Permissions
+![NTFS Restricted Permissions](04-NTFS-Restricted-Permissions.png)
+
+### 5. VirtualBox Snapshot
+![Day 2 VirtualBox Snapshot](05-Day-2-VirtualBox-Snapshot.png)

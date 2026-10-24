@@ -82,3 +82,46 @@ Detailed PDF reports and screenshots for Day 1 and Day 2 will be added to this r
 This project is part of my ongoing hands-on development in IT support, Windows system administration, networking, and cybersecurity.
 
 **Related project:** [Secure AWS Healthcare Document Portal](https://github.com/asanilewis-cyber/secure-aws-healthcare-document-portal)
+
+---
+
+## Day 3 — Group Policy Management & Security Configuration
+
+**Objective:** Configure and verify centralized security policies using Active Directory Group Policy.
+
+### Tasks Completed
+- Created a custom Group Policy Object (GPO) named `Lab-User security policy`.
+- Linked the GPO to the `Lab-Users` organizational unit.
+- Enabled the **Prevent access to the command prompt** policy.
+- Configured command prompt script processing to remain permitted.
+- Verified GPO settings using Group Policy Management.
+- Confirmed GPO configuration using PowerShell.
+- Verified organizational unit inheritance and GPO linking.
+- Created a VirtualBox snapshot to preserve the configuration.
+- Uploaded six technical screenshots documenting the configuration and verification.
+
+### PowerShell Commands Used
+
+**Verify Group Policy Object:**
+    Get-GPO -Name "Lab-User security policy"
+
+**Verify Organizational Unit Link:**
+    Get-GPInheritance -Target "OU=Lab-Users,DC=adlab,DC=test"
+
+### Skills Demonstrated
+- Active Directory Group Policy Administration
+- Windows Server Security Configuration
+- Organizational Unit Management
+- PowerShell Verification and Troubleshooting
+- Centralized Security Policy Management
+- Virtual Machine Snapshot Management
+
+### Verification Status
+GPO creation, configuration, and OU linking were successfully verified.
+
+**Pending:** Test policy application using a standard domain user on a Windows client.
+
+### Project Documentation
+[View Day 3 — Group Policy Management](Day-3-Group-Policy-Management/README.md)
+
+---

@@ -125,3 +125,55 @@ GPO creation, configuration, and OU linking were successfully verified.
 [View Day 3 — Group Policy Management](Day-3-Group-Policy-Management/README.md)
 
 ---
+
+
+---
+
+## Day 4 — Domain Join and Group Policy Verification
+
+**Objective:** Integrate a Windows 11 workstation into an Active Directory domain and verify centralized security policy enforcement.
+
+### Tasks Completed
+
+- Configured Windows 11 CLIENT01 in Oracle VirtualBox.
+- Troubleshot DNS resolution and domain controller connectivity.
+- Verified Active Directory DNS SRV records using `nslookup`.
+- Confirmed domain controller discovery using `nltest`.
+- Successfully joined CLIENT01 to the `adlab.test` domain.
+- Authenticated using the domain account `ADLAB\jsmith`.
+- Verified domain user identity using `whoami`.
+- Confirmed successful Group Policy application using `gpresult`.
+- Generated and reviewed a Group Policy Results report.
+- Verified enforcement of the Command Prompt restriction.
+- Created VirtualBox snapshots of the server and client environments.
+
+### Security Concepts Demonstrated
+
+- Active Directory Domain Services (AD DS)
+- Windows 11 Domain Integration
+- DNS Troubleshooting
+- Domain Authentication
+- Group Policy Enforcement
+- Centralized Security Administration
+- Endpoint Security Configuration
+- IT Troubleshooting and Verification
+
+### Verification Results
+
+**Domain:** `adlab.test`
+
+**Domain Controller:** `DC01`
+
+**Client Workstation:** `CLIENT01`
+
+**Authenticated User:** `ADLAB\jsmith`
+
+**Applied Group Policy:** `Lab-User security policy`
+
+**Security Restriction:** Command Prompt disabled through Group Policy.
+
+**Outcome:** Successfully integrated a Windows 11 workstation into the Active Directory environment and verified centralized policy enforcement.
+
+### Project Documentation
+
+[View Day 4 — Domain Join and GPO Verification](Day-4-Domain-Join-and-GPO-Verification/README.md)

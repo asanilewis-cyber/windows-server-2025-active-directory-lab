@@ -119,7 +119,7 @@ This project is part of my ongoing hands-on development in IT support, Windows s
 ### Verification Status
 GPO creation, configuration, and OU linking were successfully verified.
 
-**Pending:** Test policy application using a standard domain user on a Windows client.
+Completed: Successfully verified Group Policy application on Windows 11 CLIENT01 using domain account ADLAB\jsmith. Confirmed the Command Prompt restriction was enforced.
 
 ### Project Documentation
 [View Day 3 — Group Policy Management](Day-3-Group-Policy-Management/README.md)

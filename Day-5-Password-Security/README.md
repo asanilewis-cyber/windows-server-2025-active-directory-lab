@@ -1,81 +1,367 @@
-Day 05 — Active Directory Password Security & Account Lockout
-Windows Server 2025 | Active Directory Domain Services | Windows 11 | PowerShell | Windows Security Logs
-Lab date: October 28, 2026
-Environment: Isolated Oracle VirtualBox training environment
-Domain: adlab.test | Domain controller: DC01 | Client: CLIENT01
-Overview
-Configured and verified domain password and account-lockout policies, tested failed domain sign-ins, investigated Windows Security Event ID 4740, and manually unlocked a disposable Active Directory account. All activities were performed in a personal training lab, not a production environment.
-Objectives
-- Configure password security through the Default Domain Policy.
-- Configure account-lockout controls and verify effective domain settings with PowerShell.
-- Create a disposable domain test user.
-- Investigate failed authentication and identify an account-lockout event.
-- Restore access using Unlock-ADAccount and confirm the account is unlocked.
-Environment & tools
-- Windows Server 2025 domain controller (DC01)
-- Domain-joined Windows 11 virtual machine (CLIENT01)
-- Active Directory Users and Computers (ADUC)
-- Group Policy Management Editor
-- Active Directory PowerShell module
-- Event Viewer → Windows Logs → Security
-Configuration and validation
-Setting	Lab value	Evidence
-Minimum password length	12 characters	Password Policy + PowerShell
-Password complexity	Enabled	Password Policy + PowerShell
-Password history	10 remembered	Password Policy + PowerShell
-Maximum password age	90 days	PowerShell .ToString() verification
-Minimum password age	1 day	Group Policy Editor
-Reversible password encryption	Disabled	Group Policy Editor
-Account lockout threshold	5 failed attempts	Group Policy Editor + PowerShell
-Account lockout duration	15 minutes	Group Policy Editor + PowerShell
-Reset lockout counter	15 minutes	Group Policy Editor + PowerShell
-Administrator account lockout	Enabled in lab	Group Policy Editor
+# Day 5 — Active Directory Password Security & Account Lockout
 
+## Project Overview
 
-These settings were chosen for demonstration in an isolated lab; they are not presented as universal production recommendations.
-Procedure
-1. Opened the Default Domain Policy in Group Policy Management Editor and configured the password and account lockout settings.
-2. Verified the domain policy using the Active Directory PowerShell module:
-   Get-ADDefaultDomainPasswordPolicy | Select-Object MinPasswordLength,ComplexityEnabled,PasswordHistoryCount,MaxPasswordAge,LockoutThreshold,LockoutDuration,LockoutObservationWindow
-   (Get-ADDefaultDomainPasswordPolicy).MaxPasswordAge.ToString()
-3. Created the disposable user test.lockout in Active Directory Users and Computers. An initial password was rejected by policy; account creation succeeded after choosing a compliant password.
-4. Tested incorrect sign-ins from CLIENT01. An initial test was accidentally performed using jsmith, rather than test.lockout.
-5. Filtered DC01 Security logs for 4771, 4776, and 4740. An Event ID 4740 record identified the locked account as ADLAB\jsmith, with caller computer CLIENT01. This event is evidence for the initial jsmith test, not for test.lockout.
-6. Repeated the failed sign-in test with the intended disposable account test.lockout and verified its lockout status:
-   Get-ADUser -Identity 'test.lockout' -Properties LockedOut | Select-Object Name,SamAccountName,LockedOut
-   The output showed LockedOut = True.
-7. Manually restored access:
-   Unlock-ADAccount -Identity 'test.lockout'
-   Get-ADUser -Identity 'test.lockout' -Properties LockedOut | Select-Object Name,SamAccountName,LockedOut
-   The final output showed LockedOut = False.
-Troubleshooting notes
-- Incorrect account during initial lockout test: Event ID 4740 revealed jsmith as the affected user, helping identify the test-account mix-up.
-- PowerShell input errors: Corrected mistyped cmdlets, property names, account identities, and accidental copying of the PS C:\...> prompt.
-- PowerShell display formatting: MaxPasswordAge initially appeared as {} in a selected-object view. Using .ToString() confirmed 90.00:00:00.
-- Status versus history: A later LockedOut = False check on jsmith did not invalidate the earlier 4740 event; the account could have unlocked automatically under the 15-minute policy.
-- Separate evidence: No Event ID 4740 screenshot specifically identifying test.lockout was captured in the supplied evidence. The test.lockout lockout itself was verified with PowerShell (True) and its recovery with PowerShell (False).
-Results
-PASS: Domain policy values verified; disposable test account created; account lockout reproduced and confirmed for test.lockout; manual unlock command completed; post-remediation state verified as False. A separate Event ID 4740 was analyzed for jsmith, with CLIENT01 as the caller computer.
-Screenshot evidence
-File	What it demonstrates
-01-group-policy.png	Default Domain Policy editor
-02-password-policy.png	Password Policy configuration
-03-account-lockout-policy.png	Lockout threshold and duration
-04-powershell-verification.png	PowerShell domain policy verification
-05-test-user.png	Created test.lockout AD user
-06-failed-login-attempts.png	Initial Windows 11 authentication failure
-07-lockout-status-investigation.png	test.lockout initially reported unlocked
-08-failed-authentication-investigation.png	Investigation of last bad password attempt
-09-security-event-investigation.png	Filtered Windows Security log
-10-event-4740-jsmith-investigation.png	Event 4740: jsmith / CLIENT01
-11-jsmith-status-verification.png	jsmith status checked later (unlocked)
-12-test-account-login-failure.png	Repeat test with disposable account
-13-test-account-locked-true.png	test.lockout verified locked (True)
-14-manual-account-unlock.png	Unlock-ADAccount and verified False
+This lab demonstrates the configuration, verification, and troubleshooting of Active Directory domain password policies and account lockout controls using Windows Server 2025.
 
+The exercise includes password policy enforcement, failed authentication testing, Windows Security Event Log investigation, and account recovery.
 
-All screenshots were taken in an isolated personal lab. Review images before public posting to ensure no sensitive information is present.
-Skills demonstrated
-Active Directory administration · Group Policy · Account security · Windows authentication · PowerShell · Security event investigation · Troubleshooting · Help desk account recovery · IAM fundamentals · Technical documentation
-Portfolio context
-This is a hands-on personal lab, not a claim of production-domain administration. The work demonstrates configuration, troubleshooting, investigation, and evidence-based remediation using Microsoft Windows Server tools.
+**Lab Type:** Personal cybersecurity and systems administration lab  
+**Platform:** Oracle VirtualBox  
+**Domain:** adlab.test  
+**Domain Controller:** DC01  
+**Client Workstation:** CLIENT01 (Windows 11)
+
+---
+
+## Lab Objectives
+
+- Configure domain password complexity requirements.
+- Establish account lockout thresholds and duration.
+- Verify Active Directory security settings using PowerShell.
+- Create a test account to validate password enforcement.
+- Simulate failed authentication attempts.
+- Investigate Windows Security Event Logs.
+- Identify locked accounts and perform account recovery.
+- Document troubleshooting procedures and results.
+
+---
+
+## Lab Environment
+
+| Component | Configuration |
+|---|---|
+| Server | Windows Server 2025 |
+| Client | Windows 11 |
+| Virtualization | Oracle VirtualBox |
+| Domain | adlab.test |
+| Domain Controller | DC01 |
+| Client Computer | CLIENT01 |
+| Directory Service | Active Directory Domain Services |
+| Management | Group Policy Management |
+| Scripting | Windows PowerShell |
+| Monitoring | Windows Event Viewer |
+
+---
+
+## 1. Password Policy Configuration
+
+Configured the Default Domain Policy through Group Policy Management.
+
+**Navigation:**
+
+Computer Configuration → Policies → Windows Settings → Security Settings → Account Policies → Password Policy
+
+### Configured Settings
+
+| Security Setting | Value |
+|---|---|
+| Minimum password length | 12 characters |
+| Password complexity | Enabled |
+| Password history | 10 passwords remembered |
+| Maximum password age | 90 days |
+| Minimum password age | 1 day |
+| Reversible password encryption | Disabled |
+
+### Evidence
+
+![Group Policy Management](screenshots/01-group-policy.png)
+
+![Password Policy Configuration](screenshots/02-password-policy.png)
+
+---
+
+## 2. Account Lockout Configuration
+
+Configured domain account lockout settings to help reduce repeated unauthorized authentication attempts.
+
+**Navigation:**
+
+Computer Configuration → Policies → Windows Settings → Security Settings → Account Policies → Account Lockout Policy
+
+### Configured Settings
+
+| Security Setting | Value |
+|---|---|
+| Account lockout threshold | 5 failed sign-in attempts |
+| Account lockout duration | 15 minutes |
+| Reset lockout counter after | 15 minutes |
+| Allow Administrator account lockout | Enabled |
+
+### Evidence
+
+![Account Lockout Policy](screenshots/03-account-lockout-policy.png)
+
+---
+
+## 3. PowerShell Policy Verification
+
+Used Windows PowerShell on the domain controller to verify the domain password and account lockout settings.
+
+### Command
+
+```powershell
+Get-ADDefaultDomainPasswordPolicy |
+Select-Object MinPasswordLength, ComplexityEnabled,
+PasswordHistoryCount, MaxPasswordAge,
+LockoutThreshold, LockoutDuration,
+LockoutObservationWindow
+```
+
+The output confirmed the configured password length, complexity requirements, password history, and account lockout settings.
+
+The maximum password age was also verified separately.
+
+```powershell
+(Get-ADDefaultDomainPasswordPolicy).MaxPasswordAge.ToString()
+```
+
+**Verified result:** `90.00:00:00`
+
+### Evidence
+
+![PowerShell Verification](screenshots/04-powershell-verification.png)
+
+---
+
+## 4. Test Account Creation
+
+Created a disposable Active Directory user account to test password policy enforcement and account lockout behavior.
+
+**Test Account:** `test.lockout`
+
+An initial password was rejected because it did not satisfy the configured domain password policy.
+
+The account was subsequently created using a compliant password.
+
+### Evidence
+
+![Test User Account](screenshots/05-test-user.png)
+
+---
+
+## 5. Failed Authentication Testing
+
+Performed failed sign-in testing from the domain-joined Windows 11 workstation, CLIENT01.
+
+The initial test was accidentally performed using the existing `jsmith` account instead of the intended disposable account.
+
+This mistake was identified during investigation and documented rather than omitted.
+
+The test was then repeated using `test.lockout`.
+
+### Evidence
+
+![Failed Login Attempts](screenshots/06-failed-login-attempts.png)
+
+---
+
+## 6. Account Lockout Investigation
+
+Used Active Directory PowerShell commands to investigate account lockout status.
+
+### Command
+
+```powershell
+Get-ADUser -Identity "test.lockout" -Properties LockedOut |
+Select-Object Name, SamAccountName, LockedOut
+```
+
+The initial investigation did not show the intended test account as locked.
+
+After repeating the failed authentication test using the correct account, PowerShell confirmed:
+
+```text
+Name          SamAccountName    LockedOut
+----          --------------    ---------
+Test Lockout  test.lockout      True
+```
+
+### Evidence
+
+![Account Lockout Investigation](screenshots/07-lockout-status-investigation.png)
+
+![Authentication Investigation](screenshots/08-failed-authentication-investigation.png)
+
+---
+
+## 7. Windows Security Event Log Investigation
+
+Opened Windows Event Viewer on DC01.
+
+**Navigation:**
+
+Event Viewer → Windows Logs → Security
+
+Filtered the Security log for relevant authentication and account management events.
+
+### Investigated Event IDs
+
+| Event ID | Description |
+|---|---|
+| 4740 | A user account was locked out |
+| 4771 | Kerberos pre-authentication failed |
+| 4776 | The computer attempted to validate account credentials |
+
+An Event ID 4740 record identified:
+
+- **Affected account:** `ADLAB\jsmith`
+- **Caller computer:** `CLIENT01`
+- **Domain controller:** `DC01`
+
+This event was associated with the initial test performed against the wrong account.
+
+**Evidence limitation:** The available screenshots do not separately show an Event ID 4740 record identifying `test.lockout`. Its lockout was verified through PowerShell.
+
+### Evidence
+
+![Security Event Investigation](screenshots/09-security-event-investigation.png)
+
+![Event ID 4740 Investigation](screenshots/10-event-4740-jsmith-investigation.png)
+
+![Account Status Verification](screenshots/11-jsmith-status-verification.png)
+
+---
+
+## 8. Successful Account Lockout Test
+
+Repeated the failed sign-in test using the intended disposable account, `test.lockout`.
+
+The Windows 11 client displayed an authentication delay following repeated invalid credentials.
+
+PowerShell subsequently confirmed:
+
+```powershell
+Get-ADUser -Identity "test.lockout" -Properties LockedOut |
+Select-Object Name, SamAccountName, LockedOut
+```
+
+**Result:** `LockedOut = True`
+
+This confirmed that the domain account lockout policy was functioning during the test.
+
+### Evidence
+
+![Test Account Login Failure](screenshots/12-test-account-login-failure.png)
+
+![Confirmed Account Lockout](screenshots/13-test-account-locked-true.png)
+
+---
+
+## 9. Account Recovery
+
+Performed a manual account unlock using PowerShell.
+
+### Unlock Command
+
+```powershell
+Unlock-ADAccount -Identity "test.lockout"
+```
+
+### Verification Command
+
+```powershell
+Get-ADUser -Identity "test.lockout" -Properties LockedOut |
+Select-Object Name, SamAccountName, LockedOut
+```
+
+**Final result:** `LockedOut = False`
+
+This verified that the account was successfully unlocked.
+
+### Evidence
+
+![Manual Account Unlock](screenshots/14-manual-account-unlock.png)
+
+---
+
+## 10. Troubleshooting and Lessons Learned
+
+### Incorrect Account During Testing
+
+The first lockout test targeted `jsmith` instead of `test.lockout`.
+
+Event ID 4740 helped identify the affected account and the originating workstation.
+
+**Lesson:** Verify the account identity before performing authentication security tests.
+
+### PowerShell Syntax Errors
+
+Encountered command errors involving:
+
+- Incorrect parameter spelling.
+- Incorrect property names.
+- Accidentally copying the PowerShell prompt into commands.
+- Incomplete commands.
+
+Resolved these errors by correcting command syntax and validating results.
+
+**Lesson:** Accurate command syntax and careful interpretation of errors are essential administrative skills.
+
+### Password Age Display
+
+The maximum password age initially appeared as `{}` in a selected-object display.
+
+The value was verified using:
+
+```powershell
+(Get-ADDefaultDomainPasswordPolicy).MaxPasswordAge.ToString()
+```
+
+**Result:** `90.00:00:00`
+
+### Account Lockout Verification
+
+The account lockout state was confirmed using the `LockedOut` property.
+
+The final account recovery was verified by checking that the value changed from `True` to `False`.
+
+---
+
+## 11. Screenshot Evidence
+
+All screenshots were captured during hands-on testing in the isolated Active Directory lab.
+
+| Screenshot | Description |
+|---|---|
+| [01 — Group Policy](screenshots/01-group-policy.png) | Group Policy Management |
+| [02 — Password Policy](screenshots/02-password-policy.png) | Domain password requirements |
+| [03 — Account Lockout](screenshots/03-account-lockout-policy.png) | Account lockout configuration |
+| [04 — PowerShell Verification](screenshots/04-powershell-verification.png) | Domain policy verification |
+| [05 — Test User](screenshots/05-test-user.png) | Test account creation |
+| [06 — Failed Logins](screenshots/06-failed-login-attempts.png) | Windows authentication testing |
+| [07 — Lockout Investigation](screenshots/07-lockout-status-investigation.png) | Account status investigation |
+| [08 — Authentication Investigation](screenshots/08-failed-authentication-investigation.png) | Authentication troubleshooting |
+| [09 — Security Events](screenshots/09-security-event-investigation.png) | Event Viewer investigation |
+| [10 — Event ID 4740](screenshots/10-event-4740-jsmith-investigation.png) | Account lockout event analysis |
+| [11 — Account Verification](screenshots/11-jsmith-status-verification.png) | Existing account status |
+| [12 — Login Failure](screenshots/12-test-account-login-failure.png) | Test account failed authentication |
+| [13 — Confirmed Lockout](screenshots/13-test-account-locked-true.png) | PowerShell lockout confirmation |
+| [14 — Account Unlock](screenshots/14-manual-account-unlock.png) | Manual account recovery |
+
+---
+
+## 12. Skills Demonstrated
+
+- Active Directory Domain Services (AD DS)
+- Windows Server 2025 administration
+- Group Policy configuration
+- Password security controls
+- Account lockout policy enforcement
+- Windows PowerShell
+- Identity and Access Management (IAM) fundamentals
+- Windows Security Event Log analysis
+- Authentication troubleshooting
+- Help desk account recovery
+- Technical documentation
+- Security incident investigation fundamentals
+
+---
+
+## Project Outcome
+
+**Day 5 successfully demonstrated Active Directory password security configuration, account lockout enforcement, investigation, and account recovery.**
+
+The lab also reinforced the importance of accurate testing, security event analysis, troubleshooting, and documentation.
+
+**Environment:** Isolated personal training lab. This project demonstrates hands-on technical skills and does not represent production-domain administration.

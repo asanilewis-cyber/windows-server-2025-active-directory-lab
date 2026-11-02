@@ -4,11 +4,11 @@
 
 This lab demonstrates how Active Directory security groups and NTFS permissions control access to shared folders in a Windows Server 2025 environment.
 
-The exercise simulates a healthcare organization where employees need access to specific departmental files while unauthorized users must be restricted.
+The exercise simulates a healthcare organization where employees need access to departmental files while unauthorized users must be restricted.
 
-I investigated a file-share access issue, verified domain authentication and security group membership, reviewed folder permissions, and tested access using two separate domain accounts.
+I investigated a network-share access problem, verified domain authentication and group membership, reviewed folder permissions, and tested access using two separate domain accounts.
 
-**Lab environment:** Personal cybersecurity and Windows Server administration training lab.
+**Lab environment:** Personal Windows Server administration and cybersecurity training lab.
 
 ## 1. Lab Environment
 
@@ -27,488 +27,387 @@ I investigated a file-share access issue, verified domain authentication and sec
 
 ## 2. Project Objectives
 
-Apply role-based access control (RBAC) using Active Directory security groups.
-
-Review NTFS permissions on a departmental shared folder.
-
-Verify domain authentication and security group membership.
-
-Investigate why a domain user cannot access a network share.
-
-Confirm authorized users can create and modify files.
-
-Test that unauthorized users are denied access.
-
-Document troubleshooting steps and results.
+- Apply role-based access control (RBAC) using Active Directory security groups.
+- Review NTFS permissions on a departmental shared folder.
+- Verify domain authentication and security group membership.
+- Investigate why a domain user cannot access a network share.
+- Confirm authorized users can create and modify files.
+- Test that unauthorized users are denied access.
+- Document troubleshooting steps and results.
 
 ## 3. Security Configuration
 
 The Nursing folder was configured with NTFS permissions to restrict access based on departmental roles.
 
-Verified NTFS permissions
+### Verified NTFS Permissions
 
-Security Principal
+| Security Principal | Permission |
+|---|---|
+| Administrators | Full Control |
+| SYSTEM | Full Control |
+| Nursing-Staff | Modify |
+| CREATOR OWNER | Full Control (subfolders and files only) |
 
-Permission
+The Nursing-Staff security group was assigned Modify permissions, allowing authorized members to create and modify files without granting Full Control.
 
-Administrators
+This configuration demonstrates the principle of least privilege.
 
-Full Control
+**Security note:** Effective access to a network share depends on both share-level and NTFS permissions. The most restrictive applicable permission determines the effective access.
 
-SYSTEM
-
-Full Control
-
-Nursing-Staff
-
-Modify
-
-CREATOR OWNER
-
-Full Control on subfolders and files only
-
-The permissions window showed that inheritance was disabled and the listed permissions were explicitly assigned.
-
-The Nursing-Staff group provides department-based access rather than assigning permissions separately to every employee.
-
-This supports the principle of least privilege: users should receive only the access necessary for their responsibilities.
-
-Note: The screenshots verify NTFS permissions. Share-level permissions were not separately captured, so this report does not claim their exact configuration.
+![NTFS permissions](screenshots/07-ntfs-permissions.png)
 
 ## 4. Initial Problem — Network Share Access Denied
 
-During testing, domain user David Wilson attempted to access the Nursing shared folder from CLIENT01.
+During testing, domain user David Wilson (`ADLAB\dwilson`) attempted to access the Nursing shared folder from CLIENT01.
 
-Windows displayed the following error:
+**Windows displayed the following error:**
 
-Windows cannot access \DC01\Nursing
+```text
+Windows cannot access \\DC01\Nursing
+```
 
-You do not have permission to access \DC01\Nursing. Contact your network administrator to request access.
+### Initial Investigation
 
-Initial investigation
+- Incorrect domain authentication
+- DNS resolution problems
+- Network connectivity problems
+- Missing Active Directory group membership
+- Incorrect NTFS or share permissions
 
-The error could have been caused by several issues:
+The investigation focused on determining whether the problem involved connectivity, authentication, or authorization.
 
-Incorrect domain authentication
-
-DNS resolution problems
-
-Network connectivity problems
-
-Missing Active Directory group membership
-
-Insufficient NTFS or share permissions
-
-The investigation focused on determining whether the problem was related to connectivity, authentication, or authorization.
+![Network share access denied](screenshots/01-access-denied.png)
 
 ## 5. DNS and Network Connectivity Verification
 
-Before investigating file permissions, I verified that CLIENT01 could communicate with the domain controller.
+Before investigating permissions, I verified that CLIENT01 could communicate with the domain controller.
 
-DNS cache refresh
+### Commands Executed
 
-ipconfig /flushdns
-
-The command completed successfully.
-
-DNS name resolution
-
-nslookup DC01.adlab.test 10.0.2.3
-
-Verified result:
-
-Name:    DC01.adlab.test
-Address: 10.0.2.3
-
-SMB network connectivity
-
+```powershell
+ping DC01
+nslookup DC01.adlab.test
 Test-NetConnection DC01.adlab.test -Port 445
+```
 
-Verified result:
+### Verification Results
 
-ComputerName     : DC01.adlab.test
-RemoteAddress    : 10.0.2.3
-RemotePort       : 445
-SourceAddress    : 10.0.2.100
-TcpTestSucceeded : True
+- DNS resolution was successful.
+- CLIENT01 could communicate with DC01.
+- The SMB service port, TCP 445, was reachable.
 
-Port 445 is used by SMB, the protocol Windows uses to access network file shares.
+These results supported the conclusion that the access problem was not caused by a general network connectivity failure.
 
-Finding: CLIENT01 could resolve the domain controller's hostname and establish a TCP connection to its SMB service.
-
-The issue was therefore not explained by basic DNS resolution or TCP connectivity failure.
+![Network connectivity verification](screenshots/03-network-connectivity.png)
 
 ## 6. Active Directory Authentication Verification
 
-On CLIENT01, I verified the identity of the signed-in user.
+On CLIENT01, I verified the identity of the signed-in user and the computer's domain configuration.
 
+### Commands Executed
+
+```powershell
 whoami
-
-Result:
-
-adlab\dwilson
-
-I also checked the user's domain:
-
 (Get-CimInstance Win32_ComputerSystem).Domain
-
-Result:
-
-adlab.test
-
-The domain controller used for the logon session was identified with:
-
 $env:LOGONSERVER
-
-Result:
-
-\\DC01
-
-I also ran:
-
 nltest /sc_query:adlab.test
+```
 
-Result:
+### Results
 
-Trusted DC Name \\DC01.adlab.test
-Trusted DC Connection Status Status = 0 0x0 NERR_Success
-The command completed successfully
+The domain verification identified:
 
-These results confirmed that CLIENT01 was domain-joined and could communicate successfully with its domain controller.
+```text
+Domain: adlab.test
+Logon server: \\DC01
+Trusted DC: \\DC01.adlab.test
+Trusted DC Connection Status: NERR_Success
+```
+
+The successful secure-channel query confirmed that the client computer could communicate with a trusted domain controller.
+
+These checks supported successful domain connectivity and authentication.
+
+![Domain authentication verification](screenshots/02-domain-authentication.png)
 
 ## 7. Kerberos Authentication Investigation
 
-I used the following command on CLIENT01:
+I used Windows PowerShell to examine cached Kerberos authentication tickets.
 
+### Command Executed
+
+```powershell
 klist
+```
 
-The output displayed eight cached Kerberos tickets for:
+### Results
 
-dwilson @ ADLAB.TEST
+The output displayed eight cached Kerberos tickets for the `dwilson` domain session.
 
 Observed service tickets included:
 
-krbtgt/ADLAB.TEST
+- `krbtgt/ADLAB.TEST`
+- `ldap/DC01.adlab.test`
+- `cifs/DC01.adlab.test`
+- `ProtectedStorage/DC01.adlab.test`
 
-ldap/DC01.adlab.test
+The tickets displayed the encryption type:
 
-cifs/DC01.adlab.test
+```text
+AES-256-CTS-HMAC-SHA1-96
+```
 
-ProtectedStorage/DC01.adlab.test
+The Kerberos tickets provided evidence that the user had authenticated and obtained tickets for domain services.
 
-The tickets used AES-256 encryption.
+**Security finding:** Successful Kerberos authentication does not automatically grant permission to access a protected departmental folder.
 
-The CIFS ticket was particularly relevant because CIFS/SMB is used for Windows network file sharing.
-
-Finding: The user had Kerberos authentication tickets associated with the domain controller and its file-sharing service.
-
-This supported the conclusion that the access issue required further authorization investigation.
+![Kerberos ticket investigation](screenshots/04-kerberos-tickets.png)
 
 ## 8. Active Directory Group Membership Investigation
 
 On DC01, I checked David Wilson's security group membership.
 
-Get-ADPrincipalGroupMembership -Identity dwilson |
-    Select-Object Name
+### Commands Executed
 
-Result:
-
-Name
-----
-Domain Users
-
-I then checked the user's primary group:
-
-Get-ADUser -Identity dwilson -Properties PrimaryGroupID |
-    Select-Object Name,SamAccountName,PrimaryGroupID
-
-Result:
-
-Name         SamAccountName PrimaryGroupID
-----         -------------- --------------
-David Wilson dwilson        513
-
-I verified that primary group ID 513 represented Domain Users.
-
-Get-ADGroup -Identity "Domain Users" |
-    Select-Object Name,SID
-
-I also reviewed the user's explicitly assigned groups:
-
+```powershell
 Get-ADUser -Identity dwilson -Properties MemberOf,PrimaryGroupID |
     Select-Object Name,PrimaryGroupID,MemberOf
+```
 
-Result:
+### Result
 
-Name         PrimaryGroupID MemberOf
-----         -------------- --------
-David Wilson 513            {}
+```text
+Name          PrimaryGroupID    MemberOf
+----          --------------    --------
+David Wilson  513               {}
+```
 
-This showed that David Wilson's primary group was Domain Users and no additional direct group memberships were listed.
+David Wilson's PrimaryGroupID was `513`, corresponding to the Domain Users group.
 
-He was not shown as a member of the Nursing-Staff security group.
+I verified the Domain Users group using:
 
-Important troubleshooting lesson
+```powershell
+Get-ADGroup -Identity "Domain Users" |
+    Select-Object Name,SID
+```
 
-I initially investigated why Domain Users did not appear in the output of whoami /groups.
+The Domain Users SID ended in `-513`.
 
-The Active Directory investigation confirmed David Wilson's primary group ID was 513. However, the client-side token output did not display that domain group.
+The empty `MemberOf` property did not mean the account lacked all group membership. The primary group is stored separately.
 
-The screenshots establish his Active Directory membership and the missing Nursing-Staff authorization; they do not establish why Domain Users was absent from the client token display.
+### Nursing-Staff Membership Verification
+
+```powershell
+Get-ADGroupMember -Identity "Nursing-Staff" |
+    Select-Object Name,SamAccountName
+```
+
+### Result
+
+```text
+Name             SamAccountName
+----             --------------
+Michael Carter   mcarter
+```
+
+The query identified Michael Carter as a member of the Nursing-Staff group. David Wilson was not listed.
+
+This supported the finding that David Wilson lacked the departmental group membership associated with the Nursing folder's Modify permission.
+
+![User group membership](screenshots/05-user-group-membership.png)
+
+![Nursing security group members](screenshots/06-nursing-group-members.png)
 
 ## 9. Nursing-Staff Group Verification
 
-On DC01, I ran:
+On DC01, I reviewed the Nursing folder's security settings and the associated Active Directory security group.
 
-Get-ADGroupMember -Identity "Nursing-Staff" |
-    Select-Object Name,SamAccountName
+### Folder Configuration
 
-Result:
+```text
+Server: DC01
+Folder: C:\Hospital-lab\Nursing
+Network share: \\DC01\Nursing
+Security group: Nursing-Staff
+```
 
-Name           SamAccountName
-----           --------------
-Michael Carter mcarter
+### Verified Permissions
 
-This confirmed that Michael Carter was a member of the Nursing-Staff group.
+| Principal | Access |
+|---|---|
+| Administrators | Full Control |
+| SYSTEM | Full Control |
+| Nursing-Staff | Modify |
+| CREATOR OWNER | Full Control on subfolders and files only |
 
-David Wilson was not listed.
+The Nursing-Staff group received Modify access through an explicit NTFS permission entry.
 
-Authorization comparison
-
-User
-
-Nursing-Staff Membership
-
-Observed Access
-
-Michael Carter (mcarter)
-
-Yes
-
-Write access successful
-
-David Wilson (dwilson)
-
-No
-
-Access denied
-
-This matched the intended departmental access restrictions.
+Using an Active Directory group instead of assigning access individually makes departmental permissions easier to manage.
 
 ## 10. Authorized User Access Test
 
-On CLIENT01, I signed in as:
+On CLIENT01, I signed in using the authorized Nursing-Staff account.
 
-adlab\mcarter
+### Test Account
 
-I verified the identity using:
+```text
+ADLAB\mcarter
+```
 
-whoami
+### Test Location
 
-Result:
-
-adlab\mcarter
-
-I then accessed:
-
+```text
 \\DC01\Nursing
+```
 
-The folder opened successfully.
+### Actions Performed
 
-I created a test document named:
+1. Signed in with the authorized domain account.
+2. Opened the Nursing network share.
+3. Created a text document.
+4. Entered text into the document.
+5. Saved the document.
+6. Verified the file appeared in the shared folder.
 
+### Results
+
+The authorized user successfully accessed the Nursing folder and created a file.
+
+The text entered into the document was:
+
+```text
 Nursing staff write access verified.
+```
 
-I entered the following text into the document:
+The file was saved successfully.
 
-Nursing staff write access verified.
+**Result: PASS — Authorized Nursing-Staff member could create and modify a file in the departmental share.**
 
-The file was saved successfully in the shared folder.
+![Authorized write access](screenshots/08-authorized-write-test.png)
 
-Result: PASS
-
-The test demonstrated that Michael Carter could create and save a file in the Nursing shared folder.
-
-This was consistent with the Modify permission assigned to Nursing-Staff.
+![Write test confirmed](screenshots/09-write-test-confirmed.png)
 
 ## 11. Unauthorized User Access Test
 
 Using David Wilson's domain account, I attempted to access:
 
+```text
 \\DC01\Nursing
+```
 
-Windows displayed an access-denied message.
+### Observed Behavior
+
+Windows displayed an access error when the account attempted to open the network share.
 
 The account was authenticated to the domain, and the network connection to DC01 was functional.
 
 However, David Wilson was not a member of the Nursing-Staff security group.
 
-Result: PASS — access restriction enforced
+### Result
 
-The denied access was the expected outcome for a user without the required departmental authorization.
+**Access denied during the tested session.**
+
+This behavior was consistent with the configured departmental restrictions. The error alone did not prove which specific permission check caused the denial.
 
 ## 12. Troubleshooting Summary
 
-Investigation
+| Investigation | Result |
+|---|---|
+| DNS resolution | Successful |
+| Domain controller connectivity | Successful |
+| SMB port 445 connectivity | Successful |
+| Domain authentication | Confirmed |
+| Kerberos service tickets | Present |
+| David Wilson's Nursing-Staff membership | Not shown |
+| Michael Carter's Nursing-Staff membership | Confirmed |
+| Nursing folder NTFS permissions | Reviewed |
+| Authorized user write test | Successful |
+| Unauthorized user access test | Access denied |
 
-Result
+### Root Cause Assessment
 
-DNS cache refresh
-
-Successful
-
-DC01 hostname resolution
-
-Successful
-
-SMB TCP port 445
-
-Reachable
-
-CLIENT01 domain membership
-
-Confirmed
-
-Domain controller connection
-
-Successful
-
-Kerberos service tickets
-
-Present
-
-David Wilson's primary group
-
-Domain Users
-
-David Wilson's Nursing-Staff membership
-
-Not present
-
-Michael Carter's Nursing-Staff membership
-
-Confirmed
-
-Nursing folder NTFS permissions
-
-Verified
-
-Michael Carter's file creation
-
-Successful
-
-David Wilson's share access
-
-Denied
-
-Root Cause
-
-The access restriction was consistent with the intended role-based security configuration.
+The evidence supported a group-based authorization issue rather than a general connectivity failure.
 
 The Nursing folder granted Modify access to Nursing-Staff, and David Wilson was not a member of that group.
 
-The evidence supports an authorization restriction rather than a basic network connectivity failure.
+The authorized Nursing-Staff account successfully created and modified files.
+
+The results demonstrated how Active Directory group membership and NTFS permissions contribute to departmental access control.
 
 ## 13. Security Principles Demonstrated
 
-Role-Based Access Control (RBAC)
+### Role-Based Access Control (RBAC)
 
-Permissions are assigned to a group representing a job function rather than individually to each user.
+Permissions were assigned to a group representing a job function rather than individually to each user.
 
-Least Privilege
+### Least Privilege
 
-Only users requiring Nursing department access should receive the appropriate permissions.
+Only users requiring Nursing department access were intended to receive the appropriate permissions.
 
-Authentication vs. Authorization
+### Authentication vs. Authorization
 
-Authentication verifies who a user is. Authorization determines what that user is allowed to access.
+Authentication confirms who a user is. Authorization determines what that user is allowed to access.
 
-David Wilson successfully authenticated to the domain but was denied access to a restricted departmental folder.
+### Defense in Depth
 
-Defense in Depth
+Active Directory group membership and NTFS permissions provided separate layers of access control.
 
-Active Directory group membership and NTFS permissions work together to protect shared resources.
+### Security Troubleshooting
 
-Security Validation
-
-Access controls should be tested using both authorized and unauthorized accounts.
+The investigation checked DNS, connectivity, authentication, Kerberos, group membership, and permissions instead of assuming the initial error was caused by a network failure.
 
 ## 14. Final Results
 
-Test
+| Test | Outcome |
+|---|---|
+| Domain authentication | Successful |
+| DNS resolution | Successful |
+| SMB connectivity | Successful |
+| Active Directory group membership verification | Completed |
+| NTFS permissions review | Completed |
+| Authorized Nursing-Staff file creation | Successful |
+| Authorized file modification | Successful |
+| Unauthorized user access attempt | Denied |
 
-Outcome
-
-Domain authentication
-
-PASS
-
-DNS resolution
-
-PASS
-
-SMB connectivity
-
-PASS
-
-Kerberos authentication evidence
-
-PASS
-
-Active Directory group membership verification
-
-PASS
-
-Nursing folder NTFS configuration review
-
-PASS
-
-Authorized user file creation
-
-PASS
-
-Unauthorized user access restriction
-
-PASS
+The lab demonstrated departmental file-share access controls in a Windows Server 2025 Active Directory environment.
 
 ## 15. Skills Demonstrated
 
-Windows Server 2025 administration
-
-Active Directory Domain Services
-
-Role-Based Access Control (RBAC)
-
-Identity and Access Management (IAM)
-
-NTFS file permissions
-
-Windows SMB network shares
-
-Active Directory security group administration
-
-PowerShell troubleshooting
-
-DNS troubleshooting
-
-Kerberos authentication investigation
-
-Windows domain authentication
-
-Least-privilege security
-
-Access control validation
-
-Technical incident documentation
+- Windows Server 2025 administration
+- Active Directory Domain Services (AD DS)
+- Identity and Access Management (IAM)
+- Role-Based Access Control (RBAC)
+- NTFS permissions
+- SMB network share troubleshooting
+- Windows domain authentication
+- Kerberos authentication analysis
+- Active Directory security group management
+- PowerShell troubleshooting
+- Least-privilege access configuration
+- Technical documentation
 
 ## 16. Conclusion
 
 This lab demonstrated how Windows Server 2025, Active Directory security groups, and NTFS permissions can protect departmental network shares.
 
-I investigated an access-denied issue by checking DNS, SMB connectivity, domain authentication, Kerberos tickets, Active Directory group membership, and folder permissions.
+I investigated an access-denied problem by checking DNS, SMB connectivity, domain authentication, Kerberos tickets, Active Directory group membership, and folder permissions.
 
-The final tests confirmed that Michael Carter could create and save files in the Nursing share while David Wilson was denied access.
+The testing showed that an authorized Nursing-Staff account could create and modify files in the Nursing share, while a separate domain account was denied access during testing.
 
-The exercise reinforced the importance of separating authentication from authorization and verifying security controls through practical testing.
+The exercise strengthened my practical understanding of identity management, role-based access control, and Windows Server troubleshooting.
 
-Project status: Completed — personal Windows Server 2025 Active Directory lab.
+**Project scope:** Personal Windows Server and cybersecurity training lab.
+
+## Screenshot Evidence
+
+| # | Screenshot | Description |
+|---|---|---|
+| 01 | [Access Denied](screenshots/01-access-denied.png) | Unauthorized access attempt |
+| 02 | [Domain Authentication](screenshots/02-domain-authentication.png) | Domain identity verification |
+| 03 | [Network Connectivity](screenshots/03-network-connectivity.png) | DNS and network troubleshooting |
+| 04 | [Kerberos Tickets](screenshots/04-kerberos-tickets.png) | Kerberos authentication investigation |
+| 05 | [User Group Membership](screenshots/05-user-group-membership.png) | Domain user membership verification |
+| 06 | [Nursing Group Members](screenshots/06-nursing-group-members.png) | Authorized security group members |
+| 07 | [NTFS Permissions](screenshots/07-ntfs-permissions.png) | Folder security configuration |
+| 08 | [Authorized Write Test](screenshots/08-authorized-write-test.png) | Authorized file creation |
+| 09 | [Write Test Confirmed](screenshots/09-write-test-confirmed.png) | Successful file modification |

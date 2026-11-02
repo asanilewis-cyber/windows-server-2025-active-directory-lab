@@ -1,62 +1,31 @@
-Day 6 — Active Directory RBAC & Network File Share Security
+# Day 6 — Active Directory RBAC & Network File Share Security
 
-Project Overview
+## Project Overview
 
-This lab demonstrates how Active Directory security groups and NTFS permissions can control access to shared folders in a Windows Server 2025 environment.
+This lab demonstrates how Active Directory security groups and NTFS permissions control access to shared folders in a Windows Server 2025 environment.
 
 The exercise simulates a healthcare organization where employees need access to specific departmental files while unauthorized users must be restricted.
 
 I investigated a file-share access issue, verified domain authentication and security group membership, reviewed folder permissions, and tested access using two separate domain accounts.
 
-Lab environment: Personal cybersecurity and Windows Server administration training lab.
+**Lab environment:** Personal cybersecurity and Windows Server administration training lab.
 
-1. Lab Environment
+## 1. Lab Environment
 
-Component
+| Component | Configuration |
+|---|---|
+| Domain Controller | DC01 |
+| Server Operating System | Windows Server 2025 |
+| Client Computer | CLIENT01 |
+| Client Operating System | Windows 11 |
+| Active Directory Domain | adlab.test |
+| Virtualization Platform | Oracle VirtualBox |
+| File Server | DC01 |
+| Shared Folder | `\\DC01\Nursing` |
+| Server Folder Path | `C:\Hospital-lab\Nursing` |
+| Administrative Tools | Active Directory Users and Computers, PowerShell, File Explorer |
 
-Configuration
-
-Domain Controller
-
-DC01
-
-Server Operating System
-
-Windows Server 2025
-
-Client Computer
-
-CLIENT01
-
-Client Operating System
-
-Windows 11
-
-Active Directory Domain
-
-adlab.test
-
-Virtualization Platform
-
-Oracle VirtualBox
-
-File Server
-
-DC01
-
-Shared Folder
-
-\\DC01\Nursing
-
-Server Folder Path
-
-C:\Hospital-lab\Nursing
-
-Administrative Tools
-
-Active Directory Users and Computers, PowerShell, File Explorer
-
-2. Project Objectives
+## 2. Project Objectives
 
 Apply role-based access control (RBAC) using Active Directory security groups.
 
@@ -72,7 +41,7 @@ Test that unauthorized users are denied access.
 
 Document troubleshooting steps and results.
 
-3. Security Configuration
+## 3. Security Configuration
 
 The Nursing folder was configured with NTFS permissions to restrict access based on departmental roles.
 
@@ -106,7 +75,7 @@ This supports the principle of least privilege: users should receive only the ac
 
 Note: The screenshots verify NTFS permissions. Share-level permissions were not separately captured, so this report does not claim their exact configuration.
 
-4. Initial Problem — Network Share Access Denied
+## 4. Initial Problem — Network Share Access Denied
 
 During testing, domain user David Wilson attempted to access the Nursing shared folder from CLIENT01.
 
@@ -132,7 +101,7 @@ Insufficient NTFS or share permissions
 
 The investigation focused on determining whether the problem was related to connectivity, authentication, or authorization.
 
-5. DNS and Network Connectivity Verification
+## 5. DNS and Network Connectivity Verification
 
 Before investigating file permissions, I verified that CLIENT01 could communicate with the domain controller.
 
@@ -169,7 +138,7 @@ Finding: CLIENT01 could resolve the domain controller's hostname and establish a
 
 The issue was therefore not explained by basic DNS resolution or TCP connectivity failure.
 
-6. Active Directory Authentication Verification
+## 6. Active Directory Authentication Verification
 
 On CLIENT01, I verified the identity of the signed-in user.
 
@@ -207,7 +176,7 @@ The command completed successfully
 
 These results confirmed that CLIENT01 was domain-joined and could communicate successfully with its domain controller.
 
-7. Kerberos Authentication Investigation
+## 7. Kerberos Authentication Investigation
 
 I used the following command on CLIENT01:
 
@@ -235,7 +204,7 @@ Finding: The user had Kerberos authentication tickets associated with the domain
 
 This supported the conclusion that the access issue required further authorization investigation.
 
-8. Active Directory Group Membership Investigation
+## 8. Active Directory Group Membership Investigation
 
 On DC01, I checked David Wilson's security group membership.
 
@@ -287,7 +256,7 @@ The Active Directory investigation confirmed David Wilson's primary group ID was
 
 The screenshots establish his Active Directory membership and the missing Nursing-Staff authorization; they do not establish why Domain Users was absent from the client token display.
 
-9. Nursing-Staff Group Verification
+## 9. Nursing-Staff Group Verification
 
 On DC01, I ran:
 
@@ -326,7 +295,7 @@ Access denied
 
 This matched the intended departmental access restrictions.
 
-10. Authorized User Access Test
+## 10. Authorized User Access Test
 
 On CLIENT01, I signed in as:
 
@@ -362,7 +331,7 @@ The test demonstrated that Michael Carter could create and save a file in the Nu
 
 This was consistent with the Modify permission assigned to Nursing-Staff.
 
-11. Unauthorized User Access Test
+## 11. Unauthorized User Access Test
 
 Using David Wilson's domain account, I attempted to access:
 
@@ -378,7 +347,7 @@ Result: PASS — access restriction enforced
 
 The denied access was the expected outcome for a user without the required departmental authorization.
 
-12. Troubleshooting Summary
+## 12. Troubleshooting Summary
 
 Investigation
 
@@ -440,7 +409,7 @@ The Nursing folder granted Modify access to Nursing-Staff, and David Wilson was 
 
 The evidence supports an authorization restriction rather than a basic network connectivity failure.
 
-13. Security Principles Demonstrated
+## 13. Security Principles Demonstrated
 
 Role-Based Access Control (RBAC)
 
@@ -464,7 +433,7 @@ Security Validation
 
 Access controls should be tested using both authorized and unauthorized accounts.
 
-14. Final Results
+## 14. Final Results
 
 Test
 
@@ -502,7 +471,7 @@ Unauthorized user access restriction
 
 PASS
 
-15. Skills Demonstrated
+## 15. Skills Demonstrated
 
 Windows Server 2025 administration
 
@@ -532,7 +501,7 @@ Access control validation
 
 Technical incident documentation
 
-16. Conclusion
+## 16. Conclusion
 
 This lab demonstrated how Windows Server 2025, Active Directory security groups, and NTFS permissions can protect departmental network shares.
 

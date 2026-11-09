@@ -338,5 +338,25 @@ This lab demonstrated a complete security monitoring improvement workflow:
 **Investigate → Identify Gap → Correct Configuration → Test → Verify → Document**
 
 The work was performed in an isolated personal training environment using Windows Server 2025, Windows 11, Active Directory, and Oracle VirtualBox.
+## 17. Screenshot Evidence
+
+The following screenshots document the Day 7 Active Directory security monitoring and incident investigation lab.
+
+| # | Investigation Evidence | Screenshot |
+|---|---|---|
+| 1 | Failed logon Event 4625 analysis | [View](screenshots/01-failed-logon-event-4625-analysis.png) |
+| 2 | Failed logon source IP investigation | [View](screenshots/02-failed-logon-source-ip-analysis.png) |
+| 3 | Account lockout Event 4740 summary | [View](screenshots/03-account-lockout-event-4740-summary.png) |
+| 4 | Account lockout Event 4740 details | [View](screenshots/04-account-lockout-event-4740-details.png) |
+| 5 | Account lockout timeline | [View](screenshots/05-lockout-event-timeline.png) |
+| 6 | Audit policy before changes | [View](screenshots/06-audit-policy-before-changes.png) |
+| 7 | Logon audit policy review | [View](screenshots/07-logon-audit-policy-review.png) |
+| 8 | Audit policy after changes | [View](screenshots/08-audit-policy-after-changes.png) |
+| 9 | Kerberos Event 4771 discovery | [View](screenshots/09-kerberos-event-4771-discovery.png) |
+| 10 | Kerberos pre-authentication failure details | [View](screenshots/10-kerberos-preauthentication-failure-details.png) |
+| 11 | Kerberos event verification on DC01 | [View](screenshots/11-kerberos-event-dc01-verification.png) |
+| 12 | Security evidence directory creation | [View](screenshots/12-security-evidence-directory.png) |
+| 13 | Kerberos evidence export command | [View](screenshots/13-kerberos-evidence-export-command.png) |
+| 14 | Kerberos evidence export verification | [View](screenshots/14-kerberos-evidence-export-verification.png) |
 
 No production systems or real-world security incidents were involved.

@@ -192,5 +192,20 @@ The file existed and was nonempty. No cryptographic hash or chain-of-custody pro
 
 ## 14. Conclusion
 This exercise demonstrated a practical SOC investigation workflow: establish a baseline, identify an authentication anomaly, validate supporting system conditions, reproduce a controlled failure, inspect the resulting event, evaluate a detection threshold, and preserve evidence.
+## Screenshot Evidence
+
+| # | Investigation Evidence | Screenshot |
+|---|---|---|
+| 1 | Security event baseline | [View](screenshots/01-security-event-baseline.png) |
+| 2 | Failed logon source analysis | [View](screenshots/02-failed-logon-source-analysis.png) |
+| 3 | CLIENT01 time synchronization | [View](screenshots/03-client01-time-synchronization.png) |
+| 4 | DC01 time synchronization | [View](screenshots/04-dc01-time-synchronization.png) |
+| 5 | Recent failed logon check | [View](screenshots/05-recent-failed-logon-check.png) |
+| 6 | Controlled failed login | [View](screenshots/06-controlled-failed-login.png) |
+| 7 | Kerberos Event 4771 investigation | [View](screenshots/07-kerberos-event-4771-investigation.png) |
+| 8 | Kerberos failure count | [View](screenshots/08-kerberos-failure-count.png) |
+| 9 | Threshold detection rule | [View](screenshots/09-threshold-detection-rule.png) |
+| 10 | Security evidence export | [View](screenshots/10-security-evidence-export.png) |
+| 11 | Evidence file verification | [View](screenshots/11-evidence-file-verification.png) |
 
 **Environment:** Isolated personal cybersecurity lab. No production systems or real-world security incidents were involved.

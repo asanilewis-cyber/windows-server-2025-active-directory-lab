@@ -9,6 +9,46 @@ This project demonstrates practical skills in Windows Server administration, net
 
 The lab simulates a small business environment with separate IT Support and Human Resources security groups.
 
+## Windows Server 2025 Cybersecurity Lab — Project Index
+
+**Status: 10 of 10 lab exercises completed**
+
+This hands-on lab demonstrates Windows Server administration, Active Directory management, endpoint support, identity and access management, security monitoring, and incident response.
+
+| Day | Lab Project | Skills Demonstrated |
+|---|---|---|
+| 1 | Windows Server Installation | VirtualBox, Windows Server setup |
+| 2 | Active Directory & NTFS Permissions | AD DS, users, groups, file permissions |
+| 3 | Group Policy Management | GPO configuration, security policies |
+| 4 | Domain Join & GPO Verification | Windows 11 domain join, policy verification |
+| 5 | Password Security | Password policies, account lockouts |
+| 6 | Active Directory RBAC & File Share Security | Access controls, permissions, least privilege |
+| 7 | AD Security Monitoring | Windows Event Logs, PowerShell investigation |
+| 8 | SOC Threat Detection | Authentication event analysis, security investigation |
+| 9 | [Incident Response & Account Containment](Day-9-Incident-Response/README.md) | Account containment, recovery, Events 4725 and 4722 |
+| 10 | [Final Security Audit](Day-10-Final-Security-Audit/README.md) | Password policy verification, auditpol, security auditing |
+
+### Key Technologies
+
+- Windows Server 2025 and Windows 11
+- Active Directory Domain Services
+- Group Policy Management
+- PowerShell
+- Windows Security Event Logs
+- NTFS permissions and RBAC
+- Oracle VirtualBox
+
+### Career-Relevant Skills
+
+- IT Support and Windows Administration
+- Identity and Access Management (IAM)
+- Security Monitoring and Event Investigation
+- Incident Response Fundamentals
+- Account Security and Access Controls
+- Technical Troubleshooting and Documentation
+
+All activities were performed in a controlled virtual lab environment.
+
 ## Technologies Used
 
 - Microsoft Windows Server 2025
